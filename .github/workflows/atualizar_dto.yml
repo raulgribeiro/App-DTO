@@ -6,7 +6,9 @@ on:
       - main
       
   schedule:
-    - cron: '*/15 * * * *' # Alterado para 15 minutos (mínimo seguro no GitHub)
+    # O GitHub limita a frequência de agendamentos. 
+    # Alterado para 15 minutos (mínimo seguro para evitar bloqueios ou atrasos).
+    - cron: '*/15 * * * *'
 
   workflow_dispatch:
 
@@ -15,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      contents: write
+      contents: write # Permissão explícita para que o fluxo possa fazer o Push
 
     steps:
       # 1. Clona o repositório
@@ -32,19 +34,18 @@ jobs:
       - name: Instalar dependências
         run: pip install openpyxl requests
 
-      # 4. Roda o script (apenas baixa e atualiza os arquivos locais)
+      # 4. Configura a identidade do git no ambiente virtual
+      - name: Configurar identidade do git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@://github.com"
+
+      # 5. Injeta o token de autenticação no repositório local e roda o script
       - name: Atualizar dashboard DTO
         env:
           DTO_SHAREPOINT_URL: ${{ secrets.DTO_SHAREPOINT_URL }}
           CRACHA_SHAREPOINT_URL: ${{ secrets.CRACHA_SHAREPOINT_URL }}
-        run: python atualizar_DTO.py
-
-      # 5. Salva as alterações de volta no repositório com segurança
-      - name: Commit e Push das alterações
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .
-          # O comando abaixo evita que o workflow falhe se o script rodar e não houver nenhuma alteração nas planilhas
-          git diff-index --quiet HEAD || git commit -m "Bot: Atualização automática do Dashboard [skip ci]"
-          git push
+          # Configura o token secreto do GitHub para dar permissão de escrita ao comando 'git push' interno do script
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@://github.com{{ github.repository }}.git
+          python atualizar_DTO.py
