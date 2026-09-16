@@ -6,7 +6,8 @@ on:
       - main
       
   schedule:
-    - cron: '*/59 * * * *'
+    # 07:00 no Horário de Brasília equivale a 10:00 no fuso UTC
+    - cron: '0 10 * * *'
 
   workflow_dispatch:
 
@@ -16,6 +17,8 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: write
+# ... o restante dos seus passos (steps) continua exatamente igual
+
 
     steps:
       # 1. Clona o repositório
