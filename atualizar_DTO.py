@@ -295,14 +295,10 @@ def main():
     registros = extrair_dados(planilha, mapa_rh)
     atualizar_index_html(registros)
 
-    rodar_git(["add", "index.html"])
-    msg = f"{COMMIT_MSG_PREFIX} - {datetime.now().strftime('%d/%m/%Y %H:%M')}"
-    commit = rodar_git(["commit", "-m", msg])
-    if "nothing to commit" in (commit.stdout + commit.stderr):
-        print("Nada de novo para commitar (dados identicos aos ja publicados).")
-        return
-    rodar_git(["push", GIT_REMOTE_NAME, GIT_BRANCH])
-    print("\nPronto! O GitHub Pages deve atualizar o site em alguns instantes.")
+    # REMOVIDO: As linhas de git add, commit e push foram retiradas daqui
+    # para evitar o bloqueio de segurança (Exit Code 129) no GitHub Actions.
+    print("\nArquivo index.html atualizado localmente com sucesso!")
+
 
 
 if __name__ == "__main__":
