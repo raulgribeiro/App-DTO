@@ -1,0 +1,43 @@
+name: Atualizar DTO Dashboard
+
+on:
+  schedule:
+    # Roda todo dia às 09:00 horário de Brasília (12:00 UTC)
+    - cron: '0 12 * * *'
+  workflow_dispatch:  # Permite rodar manualmente pelo GitHub
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      # 1. Clona o repositório
+      - name: Checkout repositório
+        uses: actions/checkout@v4
+
+      # 2. Configura Python
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 3. Instala dependências
+      - name: Instalar dependências
+        run: pip install openpyxl requests
+
+      # 4. Configura identidade do git (necessário pro commit)
+      - name: Configurar identidade do git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      # 5. Roda o script: baixa as planilhas do SharePoint, atualiza o
+      #    index.html e já faz commit + push sozinho
+      - name: Atualizar dashboard DTO
+        env:
+          DTO_SHAREPOINT_URL: ${{ secrets.DTO_SHAREPOINT_URL }}
+          CRACHA_SHAREPOINT_URL: ${{ secrets.CRACHA_SHAREPOINT_URL }}
+        run: python atualizar_DTO.py
