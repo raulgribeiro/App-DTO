@@ -1,6 +1,6 @@
 name: Atualizar DTO Dashboard
 
-'on':
+on:
   push:
     branches:
       - main
