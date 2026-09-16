@@ -6,7 +6,7 @@ on:
       - main
       
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/15 * * * *' # Alterado para 15 minutos (mínimo seguro no GitHub)
 
   workflow_dispatch:
 
@@ -32,16 +32,19 @@ jobs:
       - name: Instalar dependências
         run: pip install openpyxl requests
 
-      # 4. Configura identidade do git (necessário pro commit)
-      - name: Configurar identidade do git
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-
-      # 5. Roda o script: baixa as planilhas do SharePoint, atualiza o
-      #    index.html e já faz commit + push sozinho
+      # 4. Roda o script (apenas baixa e atualiza os arquivos locais)
       - name: Atualizar dashboard DTO
         env:
           DTO_SHAREPOINT_URL: ${{ secrets.DTO_SHAREPOINT_URL }}
           CRACHA_SHAREPOINT_URL: ${{ secrets.CRACHA_SHAREPOINT_URL }}
         run: python atualizar_DTO.py
+
+      # 5. Salva as alterações de volta no repositório com segurança
+      - name: Commit e Push das alterações
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          # O comando abaixo evita que o workflow falhe se o script rodar e não houver nenhuma alteração nas planilhas
+          git diff-index --quiet HEAD || git commit -m "Bot: Atualização automática do Dashboard [skip ci]"
+          git push
