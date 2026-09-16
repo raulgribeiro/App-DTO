@@ -1,14 +1,8 @@
 name: Atualizar DTO Dashboard
 
 on:
-  push:
-    branches:
-      - main
-      
   schedule:
-    # 07:00 no Horário de Brasília equivale a 10:00 no fuso UTC
-    - cron: '0 10 * * *'
-
+    - cron: '15 18 * * *'
   workflow_dispatch:
 
 jobs:
@@ -17,38 +11,26 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: write
-# ... o restante dos seus passos (steps) continua exatamente igual
-
 
     steps:
-      # 1. Clona o repositório
       - name: Checkout repositório
         uses: actions/checkout@v4
 
-      # 2. Configura Python
       - name: Configurar Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # 3. Instala dependências
       - name: Instalar dependências
         run: pip install openpyxl requests
 
-      # 4. Roda o script Python (que agora apenas gera o novo index.html)
+      - name: Configurar identidade do git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
       - name: Atualizar dashboard DTO
         env:
           DTO_SHAREPOINT_URL: ${{ secrets.DTO_SHAREPOINT_URL }}
           CRACHA_SHAREPOINT_URL: ${{ secrets.CRACHA_SHAREPOINT_URL }}
         run: python atualizar_DTO.py
-
-      # 5. Faz o commit e o push de forma nativa e segura
-      - name: Commit e Push das alterações
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@://github.com"
-          git add index.html
-          
-          # O '[skip ci]' na mensagem diz para o GitHub NÃO disparar o workflow novamente após esse push
-          git diff-index --quiet HEAD || git commit -m "Atualizacao automatica DTO [skip ci]"
-          git push origin main
