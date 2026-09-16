@@ -1,11 +1,14 @@
 name: Atualizar DTO Dashboard
 
-on:
+'on':
+  push:
+    branches:
+      - main
+
   schedule:
-    # Roda todo dia às 09:00 horário de Brasília (12:00 UTC)
-   # - cron: '0 18 * * *'
     - cron: '*/5 * * * *'
-  workflow_dispatch:  # Permite rodar manualmente pelo GitHub
+
+  workflow_dispatch:
 
 jobs:
   atualizar:
