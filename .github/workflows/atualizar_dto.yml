@@ -34,3 +34,9 @@ jobs:
           DTO_SHAREPOINT_URL: ${{ secrets.DTO_SHAREPOINT_URL }}
           CRACHA_SHAREPOINT_URL: ${{ secrets.CRACHA_SHAREPOINT_URL }}
         run: python atualizar_DTO.py
+
+      - name: Commit e push
+        run: |
+          git add index.html
+          git diff --cached --quiet || git commit -m "Atualizacao automatica DTO - $(date '+%d/%m/%Y %H:%M')"
+          git push
