@@ -50,6 +50,7 @@ from pathlib import Path
 from datetime import datetime
 
 import openpyxl
+import time
 import requests
 
 # ------------------ CONFIGURAÇÃO ------------------
@@ -79,7 +80,32 @@ USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
               "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
 
-def baixar_sharepoint(url, destino):
+def aquecer_planilha(url):
+    """Abre a planilha no Excel online (navegador headless) antes de baixar.
+    O Forms so grava as respostas novas no Excel quando a planilha e aberta;
+    sem isso o arquivo baixado pode ficar defasado em relacao a base."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("  (playwright ausente: pulando a abertura da planilha)")
+        return
+    try:
+        with sync_playwright() as p:
+            try:
+                b = p.chromium.launch(channel="chrome")
+            except Exception:
+                b = p.chromium.launch()
+            pg = b.new_page(viewport={"width": 1400, "height": 900})
+            pg.goto(url, wait_until="domcontentloaded", timeout=60000)
+            time.sleep(40)
+            b.close()
+        print("  Planilha aberta no Excel online (sincronizacao do Forms)")
+        time.sleep(10)
+    except Exception as e:
+        print("  aviso: abertura da planilha falhou:", str(e)[:120])
+
+
+def baixar_sharepoint(url, destino, aquecer=False):
     """Baixa um arquivo de um link de compartilhamento 'Alguém com o link'
     do SharePoint, sem autenticação nenhuma.
 
@@ -87,6 +113,8 @@ def baixar_sharepoint(url, destino):
       1a: no link puro -> o SharePoint libera uma sessão anônima (cookie)
       2a: no mesmo link + '&download=1' -> devolve o arquivo .xlsx puro
     """
+    if aquecer:
+        aquecer_planilha(url)
     sessao = requests.Session()
     sessao.headers.update({"User-Agent": USER_AGENT})
 
@@ -106,7 +134,8 @@ def baixar_sharepoint(url, destino):
         )
 
     destino.write_bytes(resp.content)
-    print(f"Baixado do SharePoint: {destino.name} ({len(resp.content)} bytes)")
+    print(f"Baixado do SharePoint: {destino.name} ({len(resp.content)} bytes, "
+          f"Last-Modified: {resp.headers.get('Last-Modified', '?')})")
     return destino
 
 
@@ -176,7 +205,7 @@ def encontrar_planilha_dto(caminho_informado):
         return p
 
     if DTO_SHAREPOINT_URL:
-        return baixar_sharepoint(DTO_SHAREPOINT_URL, REPO_DIR / "_dto_forms_tmp.xlsx")
+        return baixar_sharepoint(DTO_SHAREPOINT_URL, REPO_DIR / "_dto_forms_tmp.xlsx", aquecer=True)
 
     if DEFAULT_XLSX_PATH:
         p_default = Path(DEFAULT_XLSX_PATH)
@@ -206,10 +235,13 @@ def extrair_dados(caminho_xlsx, mapa_rh):
     wb = openpyxl.load_workbook(caminho_xlsx, data_only=True)
     ws = wb['Sheet1']
     registros = []
+    sem_data = 0
     for r in range(2, ws.max_row + 1):
         get = lambda c: clean(ws[f'{c}{r}'].value)
         data_raw = get('B')
         if data_raw is None:
+            if any(ws.cell(row=r, column=c).value is not None for c in range(1, 12)):
+                sem_data += 1
             continue
         try:
             data_str = data_raw.strftime('%Y-%m-%d') if hasattr(data_raw, 'strftime') else str(data_raw)[:10]
@@ -245,6 +277,9 @@ def extrair_dados(caminho_xlsx, mapa_rh):
             'revisaoIT': get('BD'),
             'pontosRevisao': get('BE'),
         })
+    datas = sorted(x['data'] for x in registros if x['data'])
+    print(f"Planilha: {ws.max_row - 1} linhas lidas, {len(registros)} registros, "
+          f"{sem_data} descartados por falta de data | mais recente: {datas[-1] if datas else '?'}")
     return registros
 
 
