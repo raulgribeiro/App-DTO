@@ -636,6 +636,7 @@ function toggleTheme(){
 window.addEventListener('message', function(event){
   const data = event.data;
   if(data && data.type === 'SET_THEME' && (data.theme === 'dark' || data.theme === 'light')){
+    if((data.theme === 'light') === document.body.classList.contains('light')) return; // já está nesse tema: evita redesenhar os gráficos
     aplicarTema(data.theme === 'light', true);
   }
 });
